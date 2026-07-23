@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>当日の過ごし方 - Oshi Live Board</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- 💡 共通設定＆カウントダウン処理 -->
+    <script src="common.js" defer></script>
+    <style>
+      /* --- スタイル切替タブ --- */
+      .type-tab-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .type-tab {
+        flex: 1;
+        padding: 12px 8px;
+        text-align: center;
+        background: #faf6f0;
+        border: 2px solid #ecdcd0;
+        border-radius: 14px;
+        font-weight: bold;
+        font-size: 13px;
+        color: #7d6b5e;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+      }
+      .type-tab.active {
+        background: var(--theme-main, #f2d1c9);
+        border-color: var(--theme-main, #d86d8a);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(216, 109, 138, 0.25);
+        transform: translateY(-2px);
+      }
+
+      /* --- コンテンツエリア表示切替 --- */
+      .plan-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      .plan-content.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* プランヘッダー説明カード */
+      .plan-intro-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        border: 2px solid var(--theme-main, #ecdcd0);
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .plan-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: #faf2ee;
+        color: #b08175;
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        border: 1px solid #eee0d7;
+      }
+      .plan-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #4a3e3d;
+        margin-bottom: 6px;
+      }
+      .plan-desc {
+        font-size: 12px;
+        color: #7d6b5e;
+        line-height: 1.6;
+      }
+
+      /* 過ごし方ステップリスト */
+      .step-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .step-item {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        border: 1px solid #ecdcd0;
+        box-shadow: 0 2px 8px rgba(125, 107, 94, 0.05);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .step-icon {
+        font-size: 22px;
+        background: #faf6f0;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border: 1px solid #eee0d7;
+      }
+      .step-info {
+        flex: 1;
+      }
+      .step-phase {
+        font-size: 11px;
+        color: #b08175;
+        font-weight: bold;
+      }
+      .step-heading {
+        font-size: 14px;
+        font-weight: bold;
+        color: #4a3e3d;
+        margin: 2px 0 6px 0;
+      }
+      .step-text {
+        font-size: 12px;
+        color: #7d6b5e;
+        line-height: 1.5;
+      }
+      .step-tips {
+        margin-top: 8px;
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 11px;
+        color: #92400e;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* まとめメモカード */
+      .summary-memo-box {
+        margin-top: 24px;
+        background: #faf6f0;
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px dashed #ecdcd0;
+      }
+      .summary-memo-title {
+        font-size: 13px;
+        font-weight: bold;
+        color: #7d6b5e;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .summary-memo-textarea {
+        width: 100%;
+        height: 70px;
+        border: 1px solid #ecdcd0;
+        border-radius: 10px;
+        padding: 8px;
+        font-size: 12px;
+        font-family: inherit;
+        resize: none;
+        outline: none;
+        color: #4a3e3d;
+        background: #fff;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 🎨 背景 -->
+    <div class="app-background"></div>
+
+    <!-- 🚀【カウントダウン＆⚙️設定ヘッダー】 -->
+    <div class="countdown-bar" id="theme-bar">
+      <div class="countdown-text">
+        <span id="app-title-display" style="margin-right: 10px; font-weight: bold">Oshi Live Board</span>
+        <span id="countdown-timer">--日 --時間 --分 --秒</span>
+      </div>
+      <button class="settings-trigger" onclick="openSetupModal()" title="設定を変更する">⚙️</button>
+    </div>
+
+    <!-- 🚀【設定モーダル】 -->
+    <div id="setup-modal" class="custom-modal">
+      <div class="modal-window setup-window">
+        <div class="setup-header">
+          <h2>参戦の準備をするよ！</h2>
+          <span id="setup-close-btn" class="close-btn" onclick="closeSetupModal()">&times;</span>
+        </div>
+        <p class="setup-intro">ライブ情報とあなたの推し色を教えてね！</p>
+
+        <div class="input-group">
+          <label for="input-title">ライブ・ツアー名</label>
+          <input type="text" id="input-title" placeholder="例: OSHI FIRST LIVE" value="Oshi Live Board" />
+        </div>
+
+        <div class="input-group">
+          <label for="input-date">参戦する日（ライブ当日）</label>
+          <input type="date" id="input-date" />
+        </div>
+
+        <div class="input-group">
+          <label for="input-color">推しのメンバーカラー</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="input-color" value="#f2d1c9" />
+            <span class="color-picker-label">パレットをタップして好きな色を選んでね！</span>
+          </div>
+        </div>
+
+        <button class="save-btn" id="setup-save-btn" onclick="saveSettings()">この設定で参戦準備！</button>
+      </div>
+    </div>
+
+    <!-- 💡 メインコンテンツ -->
+    <div class="content sub-page">
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">TOPに戻る</a>
+        <h2>当日の過ごし方ガイド</h2>
+      </div>
+
+      <div class="card">
+        <!-- 🎨 ステッカー配置：双眼鏡＆お財布 -->
+        <svg
+          class="sticker stk-glasses"
+          style="top: -15px; right: -8px"
+          viewBox="0 0 100 80"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g stroke="#7d6b5e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="12" y="22" width="32" height="42" rx="10" fill="#fff" stroke="#fff" stroke-width="10" />
+            <rect x="56" y="22" width="32" height="42" rx="10" fill="#fff" stroke="#fff" stroke-width="10" />
+            <rect x="12" y="22" width="32" height="42" rx="8" fill="#e0f2fe" />
+            <rect x="56" y="22" width="32" height="42" rx="8" fill="#e0f2fe" />
+            <rect x="40" y="32" width="20" height="10" rx="2" fill="#bae6fd" />
+            <circle cx="28" cy="52" r="11" fill="#7dd3fc" />
+            <circle cx="72" cy="52" r="11" fill="#7dd3fc" />
+            <path
+              d="M 42,30 C 35,25 35,35 48,32 C 38,42 45,43 50,33 C 55,43 62,42 52,32 C 65,35 65,25 58,30 Z"
+              fill="#f2a6b4"
+              stroke-width="2"
+            />
+          </g>
+        </svg>
+
+        <p class="modal-lead" style="margin-bottom: 14px">
+          当日はどんなスタイルで過ごす？自分にぴったりな参戦計画をチェックしてみてね！✨
+        </p>
+
+        <!-- 参戦スタイル切替タブ -->
+        <div class="type-tab-container">
+          <div class="type-tab active" onclick="switchPlan('yuttari')">ゆったりさんver.</div>
+          <div class="type-tab" onclick="switchPlan('zenryoku')">全力さんver.</div>
+        </div>
+
+        <!-- ================= ☕️ ゆったりさんプラン ================= -->
+        <div id="plan-yuttari" class="plan-content active">
+          <div class="plan-intro-card">
+            <span class="plan-badge">マイペース派さん向け</span>
+            <div class="plan-title">無理せずカフェとお買い物を楽しむまったりスタイル</div>
+            <div class="plan-desc">
+              開場時間に合わせて会場入り！午前中は好きなお店でランチしたりカフェ巡りをしたり、身体に負担をかけずに楽しむ過ごし方提案です🍰✨
+            </div>
+          </div>
+
+          <div class="step-timeline">
+            <!-- STEP 1 -->
+            <div class="step-item">
+              <div class="step-icon">🎀</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 1 / 午前〜お昼頃</div>
+                <div class="step-heading">ゆっくり準備をして出発！</div>
+                <div class="step-text">
+                  メイクやヘアセットを整えて、お気に入りの参戦服に着替え！持ち物チェックを済ませて出発します。
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="step-item">
+              <div class="step-icon">🍰</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 2 / 昼〜開演数時間前</div>
+                <div class="step-heading">推し活カフェや買い物・映え写真撮影</div>
+                <div class="step-text">
+                  会場近くや移動ルート上のカフェで美味しいランチやスイーツを満喫！アクスタやぬいぐるみを出してゆっくり写真を撮影📸
+                </div>
+                <div class="step-tips">💡 混雑を避けるため事前の予約や早めのカフェ確保がおすすめ！</div>
+              </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="step-item">
+              <div class="step-icon">📍</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 3 / 開場時間の少し前</div>
+                <div class="step-heading">会場到着＆スムーズにお手洗い準備</div>
+                <div class="step-text">
+                  開場（開演の1時間〜1時間半前）に合わせてゆったり会場へ。モニュメント前などでサクッと写真を撮ったら、混む前にお手洗いを済ませて入場！
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div class="step-item">
+              <div class="step-icon">🎤</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 4 / ライブ本番〜終演</div>
+                <div class="step-heading">最高のテンションでライブ観戦！</div>
+                <div class="step-text">
+                  座席について身の回りの準備（ペンライトの発光確認など）。体力をしっかり温存できているので全開で楽しめます！
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 🔥 全力さんプラン ================= -->
+        <div id="plan-zenryoku" class="plan-content">
+          <div class="plan-intro-card">
+            <span class="plan-badge">ガチ・参戦フル満喫派さん向け</span>
+            <div class="plan-title">朝から物販・交換・交流・写真撮影までやり尽くすスタイル</div>
+            <div class="plan-desc">
+              会場の熱気を朝から全力で体感！オタ友達・フォロワーさんとの交流やグッズ交換、現場映えショットを撮り尽くす熱い過ごし方提案です🔥✨
+            </div>
+          </div>
+
+          <div class="step-timeline">
+            <!-- STEP 1 -->
+            <div class="step-item">
+              <div class="step-icon">🌅</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 1 / 早朝〜朝</div>
+                <div class="step-heading">気合いの早起き＆現場直行！</div>
+                <div class="step-text">
+                  崩れにくいメイクと参戦服で気合いバッチリ！物販開始時間や混雑に合わせて朝から会場へ向かいます。
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="step-item">
+              <div class="step-icon">🛍️</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 2 / 午前中〜お昼前</div>
+                <div class="step-heading">公式物販並び ＆ グッズ開封式</div>
+                <div class="step-text">
+                  物販列に並んで欲しかった限定グッズをゲット！購入後は近くでランダムグッズの開封式をしてワクワクを体感！
+                </div>
+                <div class="step-tips">💡 モバイルバッテリーと水分補給用の飲み物は必須！</div>
+              </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="step-item">
+              <div class="step-icon">🤝</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 3 / お昼〜午後</div>
+                <div class="step-heading">トレカ交換・買取 ＆ FFさんとの交流</div>
+                <div class="step-text">
+                  SNSで事前に約束したフォロワーさん（FFさん）とお菓子交換や挨拶！お目当ての推しを求めて会場前でグッズの交換や取引を精力的に実施。
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div class="step-item">
+              <div class="step-icon">📸</div>
+              <div class="step-info">
+                <div class="step-phase">STEP 4 / 開演数時間前〜入場</div>
+                <div class="step-heading">痛バ・ネームボードとガッツリ写真撮影</div>
+                <div class="step-text">
+                  会場のパネル前やフォトスポットで組んできた痛バやうちわ・ネームボードを並べて記念撮影！満足いくまで写真を撮り溜めたら会場へ！
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 自分の当日スケジュールメモ -->
+        <div class="summary-memo-box">
+          <div class="summary-memo-title">自分の当日のおおまかな予定メモ</div>
+          <textarea
+            id="sugosikata-memo"
+            class="summary-memo-textarea"
+            placeholder="例：12:00に〇〇駅で〇〇ちゃんと待ち合わせ！14:00に会場前でトレカ交換の約束あり。"
+          ></textarea>
+        </div>
+
+        <!-- 🎨 ステッカー配置：チケット -->
+        <svg
+          class="sticker stk-ticket"
+          style="bottom: -15px; left: -10px"
+          viewBox="0 0 120 70"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g stroke="#7d6b5e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M 10,10 L 110,10 A 8,8 0 0,1 110,30 A 8,8 0 0,1 110,50 L 10,50 A 8,8 0 0,1 10,30 A 8,8 0 0,1 10,10 Z"
+              fill="#fff"
+              stroke="#fff"
+              stroke-width="10"
+            />
+            <path
+              d="M 10,10 L 110,10 A 8,8 0 0,1 110,30 A 8,8 0 0,1 110,50 L 10,50 A 8,8 0 0,1 10,30 A 8,8 0 0,1 10,10 Z"
+              fill="#ffe4e1"
+            />
+            <line x1="35" y1="10" x2="35" y2="50" stroke="#7d6b5e" stroke-dasharray="3 3" />
+            <path d="M 60,25 C 55,20 48,27 60,36 C 72,27 65,20 60,25 Z" fill="#f2a6b4" stroke="none" />
+            <circle cx="22" cy="30" r="4" fill="#fcd34d" stroke="none" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="footer-space"></div>
+    </div>
+
+    <script src="sub-page-sync.js"></script>
+    <script>
+      // タブ切り替え処理
+      function switchPlan(type) {
+        const tabs = document.querySelectorAll(".type-tab");
+        const plans = document.querySelectorAll(".plan-content");
+
+        tabs.forEach((tab) => tab.classList.remove("active"));
+        plans.forEach((plan) => plan.classList.remove("active"));
+
+        if (type === "yuttari") {
+          tabs[0].classList.add("active");
+          document.getElementById("plan-yuttari").classList.add("active");
+        } else {
+          tabs[1].classList.add("active");
+          document.getElementById("plan-zenryoku").classList.add("active");
+        }
+      }
+
+      // 自由メモ欄の自動保存機能
+      window.addEventListener("DOMContentLoaded", () => {
+        const memoField = document.getElementById("sugosikata-memo");
+        const savedMemo = localStorage.getItem("sugosikata_user_memo");
+        if (savedMemo) {
+          memoField.value = savedMemo;
+        }
+
+        memoField.addEventListener("input", () => {
+          localStorage.setItem("sugosikata_user_memo", memoField.value);
+        });
+      });
+    </script>
+  </body>
+</html>
