@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>持ち物リスト - Oshi Live Board</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="common.js" defer></script>
+    <style>
+      .filter-section {
+        background-color: #faf6f0;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+        border: 1px solid #ecdcd0;
+      }
+      .filter-title {
+        font-size: 13px;
+        color: #7d6b5e;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      .chip-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .chip-container:last-child {
+        margin-bottom: 0;
+      }
+      .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background-color: #fff;
+        border: 1px solid #ecdcd0;
+        font-size: 12px;
+        color: #7d6b5e;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+      }
+      .filter-chip input[type="checkbox"] {
+        display: none;
+      }
+      .filter-chip.active {
+        background-color: var(--theme-main);
+        color: #fff;
+        border-color: var(--theme-main);
+      }
+      .section-title {
+        font-size: 14px;
+        color: #7d6b5e;
+        margin: 18px 0 8px 0;
+        padding-bottom: 4px;
+        border-bottom: 2px dashed var(--theme-main);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: bold;
+      }
+      .checklist {
+        padding: 0;
+        margin: 0;
+      }
+      .checklist li {
+        list-style: none;
+        margin-bottom: 10px;
+        background: #fff;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #eee;
+      }
+      .checklist li label {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 13px;
+        cursor: pointer;
+        color: #4a3e3d;
+        width: 100%;
+      }
+      .checklist input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin-top: 2px;
+        cursor: pointer;
+      }
+      .checklist input[type="checkbox"]:checked + span {
+        color: #b5a49e !important;
+        text-decoration: line-through !important;
+        opacity: 0.6;
+      }
+      .item-desc {
+        display: block;
+        font-size: 11px;
+        color: #9c8a82;
+        margin-top: 2px;
+      }
+      .genre-tips-box {
+        margin-top: 20px;
+        background-color: #fffbeb;
+        border: 2px solid #fcd34d;
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .genre-tips-title {
+        font-size: 13px;
+        font-weight: bold;
+        color: #92400e;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .genre-tips-list {
+        padding-left: 18px;
+        margin: 0;
+        font-size: 12px;
+        color: #78350f;
+        line-height: 1.6;
+      }
+      .genre-tips-list li {
+        margin-bottom: 6px;
+      }
+      .genre-tips-list li:last-child {
+        margin-bottom: 0;
+      }
+      .memo-area {
+        margin-top: 20px;
+        background-color: #faf6f0;
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px dashed #ecdcd0;
+      }
+      .memo-area h3 {
+        font-size: 13px;
+        color: #7d6b5e;
+        margin-bottom: 8px;
+      }
+      .memo-area textarea {
+        width: 100%;
+        height: 80px;
+        border: 1px solid #ecdcd0;
+        border-radius: 10px;
+        padding: 8px;
+        font-size: 12px;
+        font-family: inherit;
+        resize: none;
+        outline: none;
+        color: #4a3e3d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-background"></div>
+
+    <div class="countdown-bar" id="theme-bar">
+      <div class="countdown-text">
+        <span id="app-title-display" style="margin-right: 10px; font-weight: bold">Oshi Live Board</span>
+        <span id="countdown-timer">--日 --時間 --分 --秒</span>
+      </div>
+      <button class="settings-trigger" onclick="openSetupModal()" title="設定を変更する">⚙️</button>
+    </div>
+
+    <div id="setup-modal" class="custom-modal">
+      <div class="modal-window setup-window">
+        <div class="setup-header">
+          <h2>参戦の準備をするよ！</h2>
+          <span id="setup-close-btn" class="close-btn" onclick="closeSetupModal()">&times;</span>
+        </div>
+        <p class="setup-intro">ライブ情報とあなたの推し色を教えてね！</p>
+        <div class="input-group">
+          <label for="input-title">ライブ・ツアー名</label>
+          <input type="text" id="input-title" placeholder="例: OSHI FIRST LIVE" value="Oshi Live Board" />
+        </div>
+        <div class="input-group">
+          <label for="input-date">参戦する日（ライブ当日）</label>
+          <input type="date" id="input-date" />
+        </div>
+        <div class="input-group">
+          <label for="input-color">推しのメンバーカラー</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="input-color" value="#f2d1c9" />
+            <span class="color-picker-label">パレットをタップして好きな色を選んでね！</span>
+          </div>
+        </div>
+        <button class="save-btn" id="setup-save-btn" onclick="saveSettings()">この設定で参戦準備！</button>
+      </div>
+    </div>
+
+    <div class="content sub-page">
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">TOPに戻る</a>
+        <h2>持ち物チェッカー</h2>
+      </div>
+
+      <div class="card">
+        <!-- 🎨 ステッカー配置：ペンライト＆お財布 -->
+        <svg
+          class="sticker stk-penlight"
+          style="top: -15px; right: -10px"
+          viewBox="0 0 100 100"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g stroke="#7d6b5e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M 50,15 C 30,-5 5,20 25,45 L 45,65 L 55,65 L 75,45 C 95,20 70,-5 50,15 Z"
+              fill="#fff"
+              stroke="#fff"
+              stroke-width="12"
+            />
+            <rect x="42" y="60" width="16" height="30" rx="4" fill="#fff" stroke="#fff" stroke-width="12" />
+            <rect x="44" y="62" width="12" height="26" rx="3" fill="#faf6f0" />
+            <path d="M 50,18 C 32,0 12,22 30,42 L 50,60 L 70,42 C 88,22 68,0 50,18 Z" fill="#ffd1dc" />
+            <path
+              d="M 40,62 C 30,58 30,68 45,64 C 30,75 40,78 48,66 C 52,66 60,78 70,75 C 55,68 55,58 45,62 Z"
+              fill="#f2a6b4"
+            />
+            <circle cx="50" cy="63" r="3" fill="#fff" />
+          </g>
+        </svg>
+
+        <p class="modal-lead" style="margin-bottom: 12px">
+          あなた専用のリストを作ります。 当てはまるものを選んでね！（複数選択⚪︎）
+        </p>
+
+        <div class="filter-section">
+          <div class="filter-title">推しのジャンルは？（複数選択⚪︎）</div>
+          <div class="chip-container">
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="johnnys" />
+              ジャニーズ
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="utaite" />
+              歌い手
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="stage" />
+              舞台
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="kpop" />
+              K-POP
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="vtuber" />
+              Vtuber
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="genre" value="livehouse" />
+              ライブハウス
+            </label>
+          </div>
+
+          <div class="filter-title" style="margin-top: 10px">季節はいつ？</div>
+          <div class="chip-container">
+            <label class="filter-chip">
+              <input type="checkbox" name="season" value="summer" />
+              夏 (6〜9月)
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="season" value="winter" />
+              冬 (11〜2月)
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="season" value="rainy" />
+              雨・梅雨
+            </label>
+          </div>
+
+          <div class="filter-title" style="margin-top: 10px">会場・座席タイプは？</div>
+          <div class="chip-container">
+            <label class="filter-chip">
+              <input type="checkbox" name="seat" value="outdoor" />
+              屋外会場
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="seat" value="front" />
+              アリーナ前方
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="seat" value="back" />
+              アリーナ後方
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="seat" value="stand" />
+              スタンド・天井席
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" name="seat" value="trolley" />
+              トロッコ動線付近
+            </label>
+          </div>
+        </div>
+
+        <div id="item-list-container"></div>
+
+        <div class="memo-area">
+          <h3>フリーメモ</h3>
+          <textarea id="custom-memo" placeholder="例：フォロワーさんとの交流用お菓子、ファンレター、など..."></textarea>
+        </div>
+
+        <svg
+          class="sticker stk-wallet"
+          style="bottom: -12px; left: -10px"
+          viewBox="0 0 90 80"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g stroke="#7d6b5e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M 15,30 Q 45,20 75,30 C 85,65 5,65 15,30 Z" fill="#fff" stroke="#fff" stroke-width="10" />
+            <path d="M 15,30 Q 45,20 75,30 C 85,65 5,65 15,30 Z" fill="#fbcfe8" />
+            <path d="M 16,30 Q 45,20 74,30" fill="none" stroke-width="4" />
+            <circle cx="40" cy="21" r="4" fill="#fcd34d" />
+            <circle cx="50" cy="21" r="4" fill="#fcd34d" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="footer-space"></div>
+    </div>
+
+    <script src="sub-page-sync.js"></script>
+    <script>
+      const itemDatabase = [
+        {
+          name: "スマートフォン",
+          desc: "電子チケットの表示や連絡に必須！充電は100%で挑もう。",
+          tags: ["all"],
+          category: "絶対に忘れないで！",
+        },
+        {
+          name: "モバイルバッテリー・充電器",
+          desc: "スマホの充電がないと発券不可＆連絡不能に…絶対に持って行って！",
+          tags: ["all"],
+          category: "絶対に忘れないで！",
+        },
+        {
+          name: "財布（現金）",
+          desc: "物販やロッカー用に小銭や1,000円札を多めに入れておくと安心！",
+          tags: ["all"],
+          category: "絶対に忘れないで！",
+        },
+        {
+          name: "身分証明書",
+          desc: "本人確認（ランダムエラー救済）のために顔写真付きを必ず常備！",
+          tags: ["all"],
+          category: "絶対に忘れないで！",
+        },
+        {
+          name: "交通系ICカード",
+          desc: "帰りの改札混雑を回避するために、事前にしっかりチャージしておこう！",
+          tags: ["all"],
+          category: "絶対に忘れないで！",
+        },
+        {
+          name: "イヤホン",
+          desc: "移動中や単独行動の時に役立つ！推しの曲を聴いてテンションを上げよう。",
+          tags: ["all"],
+          category: "快適に過ごす基本グッズ",
+        },
+        {
+          name: "飲み物",
+          desc: "ライブ中の水分補給に。フタがしっかり閉まるペットボトルがおすすめ。",
+          tags: ["all"],
+          category: "快適に過ごす基本グッズ",
+        },
+        {
+          name: "ハンカチ・ティッシュ・メイクポーチ",
+          desc: "身だしなみチェックや涙を拭くためにマスト！",
+          tags: ["all"],
+          category: "快適に過ごす基本グッズ",
+        },
+        {
+          name: "お手拭きシート（ウェットティッシュ）",
+          desc: "ご飯を食べる時や、グッズ・アクスタの汚れを拭くのに何かと便利！",
+          tags: ["all"],
+          category: "快適に過ごす基本グッズ",
+        },
+        {
+          name: "ハンディファン",
+          desc: "物販待ちや入場前の熱中症対策に必須！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "汗拭きシート",
+          desc: "サッパリした状態で推しに会いに行こう！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "日焼け止め",
+          desc: "こまめな塗り直しで物販待ちの日焼けを防止！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "冷却スプレー",
+          desc: "服の上から吹きかけて一気にひんやり快適！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "帽子",
+          desc: "直射日光を防いで熱中症を予防しよう。",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "日傘（晴雨兼用）",
+          desc: "物販列や入場待ちの日陰作りに。急な雨にも対応できて晴雨兼用が便利！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "アームウォーマー（アームカバー）",
+          desc: "日焼け防止はもちろん、会場内の強すぎるエアコン冷え対策にも！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "大きめのタオル",
+          desc: "汗を拭くだけでなく、肩にかけて日よけや日焼け対策にも大活躍！",
+          tags: ["summer"],
+          category: "快適・安全お助けグッズ",
+        },
+        {
+          name: "カイロ（使い捨て・電子カイロ）",
+          desc: "貼るタイプ・貼らないタイプ・電子カイロなどを防寒用に忍ばせて！",
+          tags: ["winter"],
+          category: "防寒・寒さ対策グッズ",
+        },
+        {
+          name: "防寒着（コート・ライトダウン等）",
+          desc: "入場待ちの寒さは大敵。脱ぎ着しやすい上着で調節しよう！",
+          tags: ["winter"],
+          category: "防寒・寒さ対策グッズ",
+        },
+        {
+          name: "手袋・マフラー",
+          desc: "指先や首元を温めて、開演前の冷えを防ごう。",
+          tags: ["winter"],
+          category: "防寒・寒さ対策グッズ",
+        },
+        {
+          name: "折りたたみ傘",
+          desc: "移動時や物販待ちの急な雨に備えてバッグに忍ばせておこう。",
+          tags: ["rainy"],
+          category: "雨・梅雨の対策グッズ",
+        },
+        {
+          name: "ビニール袋（濡れたもの用）",
+          desc: "濡れてしまった傘や服、カバンを入れる用に準備！",
+          tags: ["rainy"],
+          category: "雨・梅雨の対策グッズ",
+        },
+        {
+          name: "ペンライト",
+          desc: "ライブによっては持ち込み「本数制限」があるため事前確認を！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "予備の乾電池",
+          desc: "途中でライトが消える絶望を防ぐ！事前に電池の種類を確認しておこう。",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "ドライバー（プラスドライバー等）",
+          desc: "ネジ留め式のペンライトがあるため、＋ドライバーがないと電池交換できない場合あり！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "双眼鏡",
+          desc: "表情や細かい衣装・パフォーマンスまでしっかり焼き付けよう！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "小さめのクリアファイル・硬質ケース",
+          desc: "入場特典などを綺麗に保管・持ち帰るための必須アイテム！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "痛バッグ（痛バ）",
+          desc: "缶バッジで組む場合、かなり重くなるため体力や肩の負担に注意！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "ライブグッズ（アクスタ・ぬい等）",
+          desc: "会場の看板や推し活の写真を撮る際に大活躍！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "個包装のお菓子（FF・交流用）",
+          desc: "会場で会うフォロワーさん（FFさん）や他のファンと挨拶・交流する際に便利！",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "応援うちわ・ネームボード",
+          desc: "アピール用に！※現場によって会場内の規制があるため要事前確認。",
+          tags: ["utaite"],
+          category: "歌い手ライブ参戦グッズ",
+        },
+        {
+          name: "公式顔うちわ ＆ ファンサ用うちわ",
+          desc: "規定サイズを守って制作！アピールしてレスをもらおう。",
+          tags: ["johnnys"],
+          category: "ジャニーズライブ参戦グッズ",
+        },
+        {
+          name: "公式ペンライト",
+          desc: "キンブレ等の非公式ペンライトは使用不可（×）！",
+          tags: ["johnnys"],
+          category: "ジャニーズライブ参戦グッズ",
+        },
+        {
+          name: "双眼鏡",
+          desc: "遠くのメンステ・バクステ・トロッコの推しをロックオン！",
+          tags: ["johnnys"],
+          category: "ジャニーズライブ参戦グッズ",
+        },
+        {
+          name: "ファミクラ会員証",
+          desc: "本人確認などで必要になる場合があるため、常に携帯しておこう！",
+          tags: ["johnnys"],
+          category: "ジャニーズライブ参戦グッズ",
+        },
+        {
+          name: "写真映えグッズ（アクスタ・ぬい・ちびぬい等）",
+          desc: "会場外のオブジェやモニュメントと一緒に記念撮影！",
+          tags: ["johnnys"],
+          category: "ジャニーズライブ参戦グッズ",
+        },
+        {
+          name: "双眼鏡（オペラグラス）",
+          desc: "役者の細かい表情、目線の動き、表情の変化までしっかり確認！",
+          tags: ["stage"],
+          category: "舞台・観劇参戦グッズ",
+        },
+        {
+          name: "ペンライト",
+          desc: "カテコやライブパートで使用できる作品も。使用可能かは公式サイトで事前確認！",
+          tags: ["stage"],
+          category: "舞台・観劇参戦グッズ",
+        },
+        {
+          name: "推しの公式グッズ・アクリルスタンド",
+          desc: "基本の持ち物＋推しのグッズで準備OK！フラワースタンド等と写真を撮ろう。",
+          tags: ["vtuber"],
+          category: "Vtuberライブ参戦グッズ",
+        },
+        {
+          name: "公式ペンライト",
+          desc: "会場演出で連動することが多いため、公式ペンラ＆アプリ連携・電池準備を忘れずに！",
+          tags: ["kpop"],
+          category: "K-POPライブ参戦グッズ",
+        },
+        {
+          name: "応援ボード・手作りうちわ",
+          desc: "推しに伝えるため、文字はハングル文字推奨！公式サイズを守って作成しよう。",
+          tags: ["kpop"],
+          category: "K-POPライブ参戦グッズ",
+        },
+        {
+          name: "双眼鏡",
+          desc: "広いドーム・アリーナ公演での必須アイテム！",
+          tags: ["kpop"],
+          category: "K-POPライブ参戦グッズ",
+        },
+        {
+          name: "ドリンク代（現金・主に600〜700円程度）",
+          desc: "入場時に必要！お釣りの出ないよう小銭や千円札をすぐ出せる場所に準備しよう。",
+          tags: ["livehouse"],
+          category: "ライブハウス参戦グッズ",
+        },
+        {
+          name: "マフラータオル",
+          desc: "首にかけて汗拭き＆演出で振り回す時のマストアイテム！",
+          tags: ["livehouse"],
+          category: "ライブハウス参戦グッズ",
+        },
+        {
+          name: "日焼け止め・帽子",
+          desc: "直射日光を遮るものがないので、日焼け＆熱中症対策を徹底的に！",
+          tags: ["outdoor"],
+          category: "座席・会場別の対策グッズ",
+        },
+        {
+          name: "大きめのゴミ袋（45L推奨）",
+          desc: "バッグや靴を袋に入れて口を縛れば、突然の雨や砂埃から守れます！",
+          tags: ["outdoor"],
+          category: "座席・会場別の対策グッズ",
+        },
+        {
+          name: "カンペうちわ",
+          desc: "アリーナ前方は大チャンス！読みやすい大きな文字でアピールして！",
+          tags: ["front"],
+          category: "座席・会場別の対策グッズ",
+        },
+        {
+          name: "高性能な双眼鏡（10倍〜）",
+          desc: "後方席でも表情を追えます。防振双眼鏡があればなお良し！",
+          tags: ["back", "stand"],
+          category: "座席・会場別の対策グッズ",
+        },
+        {
+          name: "うちわ・ファンサアピールグッズ",
+          desc: "スタンド席からでも推しの目に入る色使いや反射対策を！",
+          tags: ["stand"],
+          category: "座席・会場別の対策グッズ",
+        },
+        {
+          name: "アピールうちわ ＆ 視界の確保",
+          desc: "トロッコが来たら一瞬が勝負！裏表を間違えないように手元に準備！",
+          tags: ["trolley"],
+          category: "座席・会場別の対策グッズ",
+        },
+      ];
+
+      const genreTips = {
+        utaite: {
+          title: "歌い手ライブのワンポイント＆注意書き",
+          tips: [
+            "厚底靴を会場外で履きたい場合、ヒールのない替えの靴を持っていくこと。厚底での入場は周囲の迷惑になります。（※ライブによっては会場外での厚底自体が禁止の場合もあります）",
+            "ライブの細かいルールは必ず公式サイトをチェックするのが大事！",
+            "ライブ中、ペンライトの振り方は自由なので、リズムに合わせて好きなように振って楽しもう！",
+          ],
+        },
+        johnnys: {
+          title: "ジャニーズライブのワンポイント＆注意書き",
+          tips: [
+            "応援うちわなどは規定サイズがあるため注意が必要！",
+            "ライブ中、手持ちグッズは「胸の高さ」で掲げるのがマナー（例外あり）。",
+            "コロペン（近くに来たメンバーのメンカラに合わせてペンライトカラーをコロコロ変える行為）は避けたほうが無難。ファンじゃないのにファンサをもらおうとする行為と捉えられがちです（※グループによって認識が異なるため現場の空気感で調整）。",
+            "「速攻ブルーベリー（サプリ）」をライブが始まる前に飲むと視界良好になるかも！？",
+            "アンコールは全力で声を出して楽しもう！",
+          ],
+        },
+        stage: {
+          title: "舞台・観劇のワンポイント＆注意書き",
+          tips: [
+            "観劇の場合、シャカシャカ・カサカサと音の鳴る服装は推奨されていません。",
+            "全身推し色のコーデも場合によっては悪目立ちする可能性があります。",
+            "座席の形状や移動を考えると、スカートよりはパンツスタイルの方が無難です。",
+          ],
+        },
+        vtuber: {
+          title: "Vtuberライブのワンポイント＆注意書き",
+          tips: ["基本の持ち物で大体事足ります！あとは推しのグッズを持ってテンションを上げましょう！"],
+        },
+        kpop: {
+          title: "K-POPライブのワンポイント＆注意書き",
+          tips: [
+            "応援ボードやうちわの文字はハングル文字が推奨されます！公式サイズ規定をしっかり守って作成しましょう。",
+          ],
+        },
+        livehouse: {
+          title: "ライブハウスのワンポイント＆注意書き",
+          tips: [
+            "可能な限り荷物はロッカーに預けるなどして少なくするのが鉄則！",
+            "界隈や安全上の理由から厚底靴は禁止されていることが多いので注意しましょう。",
+          ],
+        },
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const memoField = document.getElementById("custom-memo");
+        const checkboxes = document.querySelectorAll('.filter-chip input[type="checkbox"]');
+
+        checkboxes.forEach((cb) => {
+          const savedValue = localStorage.getItem(`filter_${cb.name}_${cb.value}`);
+          if (savedValue === "true") {
+            cb.checked = true;
+            cb.parentElement.classList.add("active");
+          }
+
+          cb.addEventListener("change", () => {
+            if (cb.checked) {
+              cb.parentElement.classList.add("active");
+            } else {
+              cb.parentElement.classList.remove("active");
+            }
+            localStorage.setItem(`filter_${cb.name}_${cb.value}`, cb.checked);
+            renderChecklist();
+          });
+        });
+
+        const savedMemo = localStorage.getItem("oshi_live_memo");
+        if (savedMemo) memoField.value = savedMemo;
+        memoField.addEventListener("input", () => {
+          localStorage.setItem("oshi_live_memo", memoField.value);
+        });
+
+        function renderChecklist() {
+          const activeTags = ["all"];
+          const activeGenres = [];
+
+          checkboxes.forEach((cb) => {
+            if (cb.checked) {
+              activeTags.push(cb.value);
+              if (cb.name === "genre") {
+                activeGenres.push(cb.value);
+              }
+            }
+          });
+
+          const filteredItems = itemDatabase.filter((item) => {
+            return item.tags.some((tag) => activeTags.includes(tag));
+          });
+
+          const groups = {};
+          filteredItems.forEach((item) => {
+            if (!groups[item.category]) {
+              groups[item.category] = [];
+            }
+            groups[item.category].push(item);
+          });
+
+          const container = document.getElementById("item-list-container");
+          container.innerHTML = "";
+
+          for (const [categoryName, items] of Object.entries(groups)) {
+            const titleDiv = document.createElement("div");
+            titleDiv.className = "section-title";
+            titleDiv.innerText = categoryName;
+            container.appendChild(titleDiv);
+
+            const ul = document.createElement("ul");
+            ul.className = "checklist";
+
+            items.forEach((item) => {
+              const li = document.createElement("li");
+              const storageKey = `item_checked_${item.name}`;
+              const isChecked = localStorage.getItem(storageKey) === "true";
+
+              li.innerHTML = `
+              <label>
+                <input type="checkbox" data-key="${storageKey}" ${isChecked ? "checked" : ""}>
+                <span>
+                  <strong>${item.name}</strong>
+                  <span class="item-desc">${item.desc}</span>
+                </span>
+              </label>
+            `;
+
+              const cb = li.querySelector('input[type="checkbox"]');
+              cb.addEventListener("change", () => {
+                localStorage.setItem(storageKey, cb.checked);
+              });
+
+              ul.appendChild(li);
+            });
+
+            container.appendChild(ul);
+          }
+
+          activeGenres.forEach((genreKey) => {
+            if (genreTips[genreKey]) {
+              const tipData = genreTips[genreKey];
+              const tipsBox = document.createElement("div");
+              tipsBox.className = "genre-tips-box";
+
+              let tipsListHtml = `<div class="genre-tips-title">⭐️ ${tipData.title}</div><ul class="genre-tips-list">`;
+              tipData.tips.forEach((tip) => {
+                tipsListHtml += `<li>${tip}</li>`;
+              });
+              tipsListHtml += `</ul>`;
+
+              tipsBox.innerHTML = tipsListHtml;
+              container.appendChild(tipsBox);
+            }
+          });
+
+          if (filteredItems.length === 0) {
+            container.innerHTML =
+              '<p style="text-align:center; color:#9c8a82; font-size:12px; margin: 20px 0;">上の選択肢をタップすると、ここに持ち物リストが表示されるよ！</p>';
+          }
+        }
+
+        renderChecklist();
+      });
+    </script>
+  </body>
+</html>
